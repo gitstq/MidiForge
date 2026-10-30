@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python-version }} / ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Run unit tests (zero dependencies)
+        run: python -m unittest discover -s tests -t . -v
+
+      - name: Smoke test the CLI
+        run: |
+          python -m midiforge --version
+          python -m midiforge demo -o demo.mid
+          python -m midiforge info demo.mid
+          python -m midiforge stats demo.mid
+          python -m midiforge validate demo.mid
+          python -m midiforge transpose demo.mid -s 3 -o up.mid
+          python -m midiforge quantize demo.mid -g 1/8 -o q.mid
+          python -m midiforge convert demo.mid --to csv -o notes.csv
+          python -m midiforge convert demo.mid --to md -o notes.md
+
+      - name: Verify no third-party imports
+        shell: bash
+        run: |
+          python - <<'PY'
+          import ast, pathlib, sys
+
+          ALLOWED_PREFIX = {"midiforge"}
+          STDLIB_HINT = {
+              "__future__", "argparse", "bisect", "collections", "copy", "csv",
+              "dataclasses", "io", "itertools", "json", "math", "os", "random",
+              "re", "statistics", "struct", "sys", "tempfile", "textwrap",
+              "typing", "unicodedata", "unittest",
+          }
+          bad = []
+          for path in pathlib.Path("midiforge").rglob("*.py"):
+              tree = ast.parse(path.read_text(encoding="utf-8"))
+              for node in ast.walk(tree):
+                  if isinstance(node, ast.Import):
+                      for alias in node.names:
+                          root = alias.name.split(".")[0]
+                          if root not in STDLIB_HINT and root not in ALLOWED_PREFIX:
+                              bad.append("%s: import %s" % (path, alias.name))
+                  elif isinstance(node, ast.ImportFrom):
+                      if node.level == 0 and node.module:
+                          root = node.module.split(".")[0]
+                          if root not in STDLIB_HINT and root not in ALLOWED_PREFIX:
+                              bad.append("%s: from %s import ..." % (path, node.module))
+          if bad:
+              print("发现非标准库依赖：")
+              for line in bad:
+                  print("  " + line)
+              sys.exit(1)
+          print("✅ midiforge/ 内无第三方依赖")
+          PY
+
+  build:
+    name: Build distributions
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tooling
+        run: python -m pip install --upgrade pip build twine
+      - name: Build sdist and wheel
+        run: python -m build
+      - name: Check metadata
+        run: python -m twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*

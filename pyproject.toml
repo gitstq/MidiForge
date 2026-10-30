@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "midiforge"
+version = "1.0.0"
+description = "零依赖的 MIDI（SMF）解析、分析、变换与校验工具箱，同时提供命令行工具"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "MidiForge Contributors" }]
+keywords = [
+    "midi",
+    "smf",
+    "music",
+    "audio",
+    "parser",
+    "music-analysis",
+    "cli",
+    "zero-dependency",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Education",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Multimedia :: Sound/Audio :: MIDI",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["build>=1.0", "twine>=4.0"]
+
+[project.urls]
+Homepage = "https://github.com/gitstq/MidiForge"
+Repository = "https://github.com/gitstq/MidiForge"
+Issues = "https://github.com/gitstq/MidiForge/issues"
+Changelog = "https://github.com/gitstq/MidiForge/blob/main/CHANGELOG.md"
+
+[project.scripts]
+midiforge = "midiforge.cli:main"
+
+[tool.setuptools]
+packages = ["midiforge"]
+
+[tool.setuptools.package-data]
+midiforge = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
